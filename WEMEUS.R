@@ -14,7 +14,7 @@ remove(list=ls())
 #Change
 
 #Set Working Directory
-setwd("C:/Users/Nicholas/Desktop/Senior Thesis Work")
+setwd("C:/Users/Nicholas/Box/Senior Thesis Work")
 
 ## Load in Necessary Packages ##
 
