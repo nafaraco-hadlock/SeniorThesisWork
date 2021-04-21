@@ -12,7 +12,7 @@
 remove(list=ls()) 
 
 #Set Working Directory
-setwd("U:\naf42_RS\ Desktop\ Senior Thesis Work")
+setwd("~/Senior Thesis Work")
 
 ## Load in Necessary Packages ##
 
@@ -65,12 +65,17 @@ fifty=rbind(fifty1,fifty2,fifty3,fifty4,fifty5,fifty6,fifty7,fifty8,fifty9,fifty
 
 #merge fifty with routes
 
-#USData=merge(routes,fifty)
-#head(USData)
-WM=fifty[fifty$AOU==05011,]
-WEMEUS=merge(WM,routes)
+USData=merge(routes,fifty)
+head(USData)
+
+#Determine the Years for Which a route was surveyed
+RouteTest=USData[USData$RouteName=='MAYBELL',]
+unique(RouteTest$Year)
 
 #Extract Western Meadowlark Data
+
+# WM=fifty[fifty$AOU==05011,]
+# WEMEUS=merge(WM,routes)
 WEMEUS=USData[USData$AOU==05011,]
 head(WEMEUS)
 
@@ -118,30 +123,32 @@ summary(WEMEallroutes)
 #linear regression for all point count data for Stop1 with Long and Lat
 WMS1=matrix(ncol=7,byrow=TRUE)
 dfWMS1=as.data.frame(WMS1)
-
+TrashMatrix=matrix()
 
 for (i in 1:nrow(WEMEUS)){
-  dfWMS1=rbind(dfWMS1, matrix(ncol=7,byrow=TRUE))
-  wmi=WEMEUS[WEMEUS$StateNum==WEMEUS$StateNum[i],]
-  A=WEMEUS$RouteName[i]
-  S=WEMEUS$StateNum[i]
-  wmiRoute=WEMEUS[WEMEUS$RouteName==A,]
-  L=WEMEUS$RouteDataID[i]
-  Y=WEMEUS$Stratum[i]
-  B=summary(lm(formula = wmiRoute$Stop1~wmiRoute$Year))$coefficients[2]
-  C=WEMEUS$Longitude[i]
-  D=WEMEUS$Latitude[i]
-  dfWMS1[i,1]=A
-  dfWMS1[i,2]=L
-  dfWMS1[i,3]=S
-  dfWMS1[i,4]=Y
-  dfWMS1[i,5]=B
-  dfWMS1[i,6]=C
-  dfWMS1[i,7]=D
-  
-  #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D))
+  if (identical(which(TrashMatrix==WEMEUS$RouteName[i]),integer(0))){
+    dfWMS1=rbind(dfWMS1, matrix(ncol=7,byrow=TRUE))
+    wmi=WEMEUS[WEMEUS$StateNum==WEMEUS$StateNum[i],]
+    A=WEMEUS$RouteName[i]
+    S=WEMEUS$StateNum[i]
+    wmiRoute=WEMEUS[WEMEUS$RouteName==A,]
+    L=WEMEUS$RouteDataID[i]
+    Y=WEMEUS$Stratum[i]
+    B=summary(lm(formula = wmiRoute$Stop1~wmiRoute$Year))$coefficients[2]
+    C=WEMEUS$Longitude[i]
+    D=WEMEUS$Latitude[i]
+    dfWMS1[i,1]=A
+    dfWMS1[i,2]=L
+    dfWMS1[i,3]=S
+    dfWMS1[i,4]=Y
+    dfWMS1[i,5]=B
+    dfWMS1[i,6]=C
+    dfWMS1[i,7]=D
+    TrashMatrix=rbind(TrashMatrix,matrix(A))
+    
+    #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D)) 
+  }
 }
-
 
 head(dfWMS1)
 #dfWMS1=as.data.frame(WMS1)
