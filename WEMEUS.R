@@ -13,6 +13,7 @@ remove(list=ls())
 
 #Set Working Directory
 setwd("C:/Users/Nicholas/Box/Senior Thesis Work")
+dk
 
 ## Load in Necessary Packages ##
 
