@@ -23,6 +23,10 @@ library(raster)
 # Install the rgdal package
 #install.packages(c('rgdal'),repos = "http://cran.case.edu", configure.args=c("--with-proj-include=/packages/PROJ/6.1.0/include","--with-proj-lib=/packages/PROJ/6.1.0/lib"))
 library(rgdal)
+
+#Instal dplyr
+library(dplyr)
+
 ## Reading in BBS Data ##
 
 #routes
@@ -209,6 +213,7 @@ unique(dfnewhistogram$V1)
 names(dfnewhistogram)=c("PropAg","Longitude","Latitude")
 dfnewhistogram=na.omit(dfnewhistogram)
 head(dfnewhistogram)
+dfnewhistogram=distinct(dfnewhistogram)
 PTLC = merge(dfnewhistogram,dfWMS1)
 PTLC=na.omit(PTLC)
 head(PTLC)
@@ -216,7 +221,15 @@ unique(PTLC$PropAg)
 plot(PTLC$PopTrend~PTLC$PropAg)
 x=lm(formula = PTLC$PopTrend~PTLC$PropAg)
 abline(x)
+abline(a=0,b=0)
 summary(x)
+
+
+
+
+
+
+
 
 
 
@@ -321,11 +334,3 @@ range(WEMEAFLat[,2], na.rm=TRUE)
 # class(WMS1[2,7])
 
 #setequal(unique(USData[USData$RouteName==WEMEUS$RouteName[1],]$Year),unique(WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[1],]$Year))
-
-# ZeroYears=unique(USData[USData$RouteName==WEMEUS$RouteName[1],]$Year)[!(unique(USData[USData$RouteName==WEMEUS$RouteName[1],]$Year) %in% unique(WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[1],]$Year))]
-# wmiRoute=WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[1],]
-# wmiR2=cbind(matrix(nrow=nrow(wmiRoute)),wmiRoute$Year,wmiRoute$Stop1)
-# for (i in 1:length(ZeroYears)){
-#   wmiR2=rbind(wmiR2,c(NA,ZeroYears[i],0))
-# }
-# wmiR2
