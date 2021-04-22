@@ -12,7 +12,7 @@
 remove(list=ls()) 
 
 #Set Working Directory
-setwd("~/Senior Thesis Work")
+setwd("U:\naf42_RS\ Desktop\ Senior Thesis Work")
 
 ## Load in Necessary Packages ##
 
@@ -23,10 +23,6 @@ library(raster)
 # Install the rgdal package
 #install.packages(c('rgdal'),repos = "http://cran.case.edu", configure.args=c("--with-proj-include=/packages/PROJ/6.1.0/include","--with-proj-lib=/packages/PROJ/6.1.0/lib"))
 library(rgdal)
-
-#Instal dplyr
-library(dplyr)
-
 ## Reading in BBS Data ##
 
 #routes
@@ -69,23 +65,14 @@ fifty=rbind(fifty1,fifty2,fifty3,fifty4,fifty5,fifty6,fifty7,fifty8,fifty9,fifty
 
 #merge fifty with routes
 
-USData=merge(routes,fifty)
-head(USData)
-
-#Test: Determine the Years for Which a route was surveyed
-RouteTest=USData[USData$RouteName=='MAYBELL',]
-unique(RouteTest$Year)
+#USData=merge(routes,fifty)
+#head(USData)
+WM=fifty[fifty$AOU==05011,]
+WEMEUS=merge(WM,routes)
 
 #Extract Western Meadowlark Data
-
-# WM=fifty[fifty$AOU==05011,]
-# WEMEUS=merge(WM,routes)
 WEMEUS=USData[USData$AOU==05011,]
 head(WEMEUS)
-
-#Test: Determine the years when WEME were not seen
-WEMERouteTest=WEMEUS[WEMEUS$RouteName=='MAYBELL',]
-unique(WEMERouteTest$Year)
 
 #Read in Zonal Histogram from QGIS Buffer
 histogram=read.csv('US_NLCD_2016_HISTO.csv',header=T)
@@ -131,61 +118,30 @@ summary(WEMEallroutes)
 #linear regression for all point count data for Stop1 with Long and Lat
 WMS1=matrix(ncol=7,byrow=TRUE)
 dfWMS1=as.data.frame(WMS1)
-TrashMatrix=matrix()
+
 
 for (i in 1:nrow(WEMEUS)){
-  if (identical(which(TrashMatrix==WEMEUS$RouteName[i]),integer(0))){
-    if (setequal(unique(USData[USData$RouteName==WEMEUS$RouteName[i],]$Year),unique(WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[i],]$Year))){
-      dfWMS1=rbind(dfWMS1, matrix(ncol=7,byrow=TRUE))
-      #wmi=WEMEUS[WEMEUS$StateNum==WEMEUS$StateNum[i],]
-      A=WEMEUS$RouteName[i]
-      S=WEMEUS$StateNum[i]
-      wmiRoute=WEMEUS[WEMEUS$RouteName==A,]
-      L=WEMEUS$RouteDataID[i]
-      Y=WEMEUS$Stratum[i]
-      B=summary(lm(formula = wmiRoute$Stop1~wmiRoute$Year))$coefficients[2]
-      C=WEMEUS$Longitude[i]
-      D=WEMEUS$Latitude[i]
-      dfWMS1[i,1]=A
-      dfWMS1[i,2]=L
-      dfWMS1[i,3]=S
-      dfWMS1[i,4]=Y
-      dfWMS1[i,5]=B
-      dfWMS1[i,6]=C
-      dfWMS1[i,7]=D
-      TrashMatrix=rbind(TrashMatrix,matrix(A))
-      
-      #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D))      
-    }
-    else{
-      dfWMS1=rbind(dfWMS1, matrix(ncol=7,byrow=TRUE))
-      #wmi=WEMEUS[WEMEUS$StateNum==WEMEUS$StateNum[i],]
-      A=WEMEUS$RouteName[i]
-      S=WEMEUS$StateNum[i]
-      ZeroYears=unique(USData[USData$RouteName==WEMEUS$RouteName[1],]$Year)[!(unique(USData[USData$RouteName==WEMEUS$RouteName[1],]$Year) %in% unique(WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[1],]$Year))]
-      wmiRoute=WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[1],]
-      wmiR2=cbind(matrix(nrow=nrow(wmiRoute)),wmiRoute$Year,wmiRoute$Stop1)
-      for (i in 1:length(ZeroYears)){
-        wmiR2=rbind(wmiR2,c(NA,ZeroYears[i],0))
-      }
-      L=WEMEUS$RouteDataID[i]
-      Y=WEMEUS$Stratum[i]
-      B=summary(lm(formula = wmiR2[,3]~wmiR2[,2]))$coefficients[2]
-      C=WEMEUS$Longitude[i]
-      D=WEMEUS$Latitude[i]
-      dfWMS1[i,1]=A
-      dfWMS1[i,2]=L
-      dfWMS1[i,3]=S
-      dfWMS1[i,4]=Y
-      dfWMS1[i,5]=B
-      dfWMS1[i,6]=C
-      dfWMS1[i,7]=D
-      TrashMatrix=rbind(TrashMatrix,matrix(A))
-      
-      #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D))        
-    }
-  }
+  dfWMS1=rbind(dfWMS1, matrix(ncol=7,byrow=TRUE))
+  wmi=WEMEUS[WEMEUS$StateNum==WEMEUS$StateNum[i],]
+  A=WEMEUS$RouteName[i]
+  S=WEMEUS$StateNum[i]
+  wmiRoute=WEMEUS[WEMEUS$RouteName==A,]
+  L=WEMEUS$RouteDataID[i]
+  Y=WEMEUS$Stratum[i]
+  B=summary(lm(formula = wmiRoute$Stop1~wmiRoute$Year))$coefficients[2]
+  C=WEMEUS$Longitude[i]
+  D=WEMEUS$Latitude[i]
+  dfWMS1[i,1]=A
+  dfWMS1[i,2]=L
+  dfWMS1[i,3]=S
+  dfWMS1[i,4]=Y
+  dfWMS1[i,5]=B
+  dfWMS1[i,6]=C
+  dfWMS1[i,7]=D
+  
+  #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D))
 }
+
 
 head(dfWMS1)
 #dfWMS1=as.data.frame(WMS1)
@@ -193,7 +149,6 @@ names(dfWMS1) = c("Route","RouteDataID","StateNum","Strata","PopTrend","Longitud
 unique(dfWMS1$PopTrend)
 dfWMS1=na.omit(dfWMS1)
 nrow(dfWMS1)
-head(dfWMS1)
 
 #Merge histogram with population trend data
 newhistogram=matrix(ncol=3,byrow=TRUE)
@@ -213,7 +168,6 @@ unique(dfnewhistogram$V1)
 names(dfnewhistogram)=c("PropAg","Longitude","Latitude")
 dfnewhistogram=na.omit(dfnewhistogram)
 head(dfnewhistogram)
-dfnewhistogram=distinct(dfnewhistogram)
 PTLC = merge(dfnewhistogram,dfWMS1)
 PTLC=na.omit(PTLC)
 head(PTLC)
@@ -221,15 +175,7 @@ unique(PTLC$PropAg)
 plot(PTLC$PopTrend~PTLC$PropAg)
 x=lm(formula = PTLC$PopTrend~PTLC$PropAg)
 abline(x)
-abline(a=0,b=0)
 summary(x)
-
-
-
-
-
-
-
 
 
 
@@ -332,5 +278,3 @@ range(WEMEAFLat[,2], na.rm=TRUE)
 # 
 # class(D)
 # class(WMS1[2,7])
-
-#setequal(unique(USData[USData$RouteName==WEMEUS$RouteName[1],]$Year),unique(WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[1],]$Year))
