@@ -12,7 +12,7 @@
 remove(list=ls()) 
 
 #Set Working Directory
-setwd("U:\naf42_RS\ Desktop\ Senior Thesis Work")
+setwd("//rschfs1x/userrs/K-Q/naf42_RS/Desktop/Senior Thesis Work")
 
 ## Load in Necessary Packages ##
 
@@ -23,7 +23,22 @@ library(raster)
 # Install the rgdal package
 #install.packages(c('rgdal'),repos = "http://cran.case.edu", configure.args=c("--with-proj-include=/packages/PROJ/6.1.0/include","--with-proj-lib=/packages/PROJ/6.1.0/lib"))
 library(rgdal)
+
+#Install dplyr
+library(dplyr)
+
+#Install lme
+library(lme4)
+library(nlme)
+
+#Instat MuMIn
+library(MuMIn)
+
 ## Reading in BBS Data ##
+
+#Read in weather.csv to get observer #
+weather=read.csv('weather.csv',header=T)
+head(weather)
 
 #routes
 routes=read.csv('routes.csv',header=T)
@@ -65,14 +80,24 @@ fifty=rbind(fifty1,fifty2,fifty3,fifty4,fifty5,fifty6,fifty7,fifty8,fifty9,fifty
 
 #merge fifty with routes
 
-#USData=merge(routes,fifty)
-#head(USData)
-WM=fifty[fifty$AOU==05011,]
-WEMEUS=merge(WM,routes)
+USData=merge(routes,fifty)
+USData=merge(USData,weather)
+head(USData)
+
+#Test: Determine the Years for Which a route was surveyed
+RouteTest=USData[USData$RouteName=='MAYBELL',]
+unique(RouteTest$Year)
 
 #Extract Western Meadowlark Data
+
+# WM=fifty[fifty$AOU==05011,]
+# WEMEUS=merge(WM,routes)
 WEMEUS=USData[USData$AOU==05011,]
 head(WEMEUS)
+
+#Test: Determine the years when WEME were not seen
+WEMERouteTest=WEMEUS[WEMEUS$RouteName=='MAYBELL',]
+unique(WEMERouteTest$Year)
 
 #Read in Zonal Histogram from QGIS Buffer
 histogram=read.csv('US_NLCD_2016_HISTO.csv',header=T)
@@ -116,39 +141,76 @@ plot(WEMEallroutes)
 summary(WEMEallroutes)
 
 #linear regression for all point count data for Stop1 with Long and Lat
-WMS1=matrix(ncol=7,byrow=TRUE)
+WMS1=matrix(ncol=8,byrow=TRUE)
 dfWMS1=as.data.frame(WMS1)
+TrashMatrix=matrix()
 
 
 for (i in 1:nrow(WEMEUS)){
-  dfWMS1=rbind(dfWMS1, matrix(ncol=7,byrow=TRUE))
-  wmi=WEMEUS[WEMEUS$StateNum==WEMEUS$StateNum[i],]
-  A=WEMEUS$RouteName[i]
-  S=WEMEUS$StateNum[i]
-  wmiRoute=WEMEUS[WEMEUS$RouteName==A,]
-  L=WEMEUS$RouteDataID[i]
-  Y=WEMEUS$Stratum[i]
-  B=summary(lm(formula = wmiRoute$Stop1~wmiRoute$Year))$coefficients[2]
-  C=WEMEUS$Longitude[i]
-  D=WEMEUS$Latitude[i]
-  dfWMS1[i,1]=A
-  dfWMS1[i,2]=L
-  dfWMS1[i,3]=S
-  dfWMS1[i,4]=Y
-  dfWMS1[i,5]=B
-  dfWMS1[i,6]=C
-  dfWMS1[i,7]=D
-  
-  #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D))
+  if (identical(which(TrashMatrix==WEMEUS$RouteName[i]),integer(0))){
+    if (setequal(unique(USData[USData$RouteName==WEMEUS$RouteName[i],]$Year),unique(WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[i],]$Year))){
+      dfWMS1=rbind(dfWMS1, matrix(ncol=8,byrow=TRUE))
+      #wmi=WEMEUS[WEMEUS$StateNum==WEMEUS$StateNum[i],]
+      RouteName=WEMEUS$RouteName[i]
+      State=WEMEUS$StateNum[i]
+      wmiRoute=WEMEUS[WEMEUS$RouteName==RouteName,]
+      RouteDataID=WEMEUS$RouteDataID[i]
+      Stratum=WEMEUS$Stratum[i]
+      PopTrend=summary(lm(formula = wmiRoute$Stop1~wmiRoute$Year))$coefficients[2]
+      Long=WEMEUS$Longitude[i]
+      Lat=WEMEUS$Latitude[i]
+      ObsN=WEMEUS$ObsN[i]
+      dfWMS1[i,1]=RouteName
+      dfWMS1[i,2]=RouteDataID
+      dfWMS1[i,3]=State
+      dfWMS1[i,4]=Stratum
+      dfWMS1[i,5]=PopTrend
+      dfWMS1[i,6]=Long
+      dfWMS1[i,7]=Lat
+      dfWMS1[i,8]=ObsN
+      TrashMatrix=rbind(TrashMatrix,matrix(RouteName))
+      
+      #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D))      
+    }
+    else{
+      dfWMS1=rbind(dfWMS1, matrix(ncol=8,byrow=TRUE))
+      #wmi=WEMEUS[WEMEUS$StateNum==WEMEUS$StateNum[i],]
+      RouteName=WEMEUS$RouteName[i]
+      State=WEMEUS$StateNum[i]
+      ZeroYears=unique(USData[USData$RouteName==WEMEUS$RouteName[i],]$Year)[!(unique(USData[USData$RouteName==WEMEUS$RouteName[i],]$Year) %in% unique(WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[i],]$Year))]
+      wmiRoute=WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[i],]
+      wmiR2=cbind(matrix(nrow=nrow(wmiRoute)),wmiRoute$Year,wmiRoute$Stop1)
+      for (i in 1:length(ZeroYears)){
+        wmiR2=rbind(wmiR2,c(NA,ZeroYears[i],0))
+      }
+      RouteDataID=WEMEUS$RouteDataID[i]
+      Stratum=WEMEUS$Stratum[i]
+      PopTrend=summary(lm(formula = wmiR2[,3]~wmiR2[,2]))$coefficients[2]
+      Long=WEMEUS$Longitude[i]
+      Lat=WEMEUS$Latitude[i]
+      ObsN=WEMEUS$ObsN[i]
+      dfWMS1[i,1]=RouteName
+      dfWMS1[i,2]=RouteDataID
+      dfWMS1[i,3]=State
+      dfWMS1[i,4]=Stratum
+      dfWMS1[i,5]=PopTrend
+      dfWMS1[i,6]=Long
+      dfWMS1[i,7]=Lat
+      dfWMS1[i,8]=ObsN
+      TrashMatrix=rbind(TrashMatrix,matrix(RouteName))
+      
+      #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D))        
+    }
+  }
 }
-
 
 head(dfWMS1)
 #dfWMS1=as.data.frame(WMS1)
-names(dfWMS1) = c("Route","RouteDataID","StateNum","Strata","PopTrend","Longitude","Latitude")
+names(dfWMS1) = c("Route","RouteDataID","StateNum","Strata","PopTrend","Longitude","Latitude","Observer_Number")
 unique(dfWMS1$PopTrend)
 dfWMS1=na.omit(dfWMS1)
 nrow(dfWMS1)
+head(dfWMS1)
 
 #Merge histogram with population trend data
 newhistogram=matrix(ncol=3,byrow=TRUE)
@@ -168,6 +230,7 @@ unique(dfnewhistogram$V1)
 names(dfnewhistogram)=c("PropAg","Longitude","Latitude")
 dfnewhistogram=na.omit(dfnewhistogram)
 head(dfnewhistogram)
+dfnewhistogram=distinct(dfnewhistogram)
 PTLC = merge(dfnewhistogram,dfWMS1)
 PTLC=na.omit(PTLC)
 head(PTLC)
@@ -175,7 +238,33 @@ unique(PTLC$PropAg)
 plot(PTLC$PopTrend~PTLC$PropAg)
 x=lm(formula = PTLC$PopTrend~PTLC$PropAg)
 abline(x)
+abline(a=0,b=0)
 summary(x)
+dfPTLC=as.data.frame(PTLC)
+write.csv(dfPTLC,"PTLC.csv",FALSE)
+dfPTLC=read.csv('PTLC.csv',header=T)
+
+##Model Suite##
+
+#Null Model: Population Trend Varies Randomly (not varying with propag or coordinate)
+lme1 <- lme(PopTrend ~ 1, random=list(~1|Observer_Number), data=dfPTLC)
+#Population trend varies with relation to proportion agriculture
+lme2 <- lme(PopTrend ~ PropAg, random=list(~1|Observer_Number), data=dfPTLC)
+#Population trend varies with relation to proportion agriculture and longitude (With relation to WEME historic range, land use pattern and precipitation)
+lme3 <- lme(PopTrend ~ PropAg + Longitude, random=list(~1|Observer_Number), data=dfPTLC)
+#Population trend varies with relation to proportion agriculture and latitude (migration distance, preferred breeding habitat, mean annual temperature)
+lme4 <- lme(PopTrend ~ PropAg + Latitude, random=list(~1|Observer_Number), data = dfPTLC)
+#Population trend varies with relation to proportion agriculture, latitude and longitude (reasons above)
+lme5 <- lme(PopTrend ~ PropAg + Longitude + Latitude, random=list(~1|Observer_Number), data=dfPTLC)
+
+##AIC##
+model.sel (lme1, lme2, lme3, lme4, lme5)
+summary(lme1)
+summary(lme2)
+
+
+
+
 
 
 
@@ -278,3 +367,5 @@ range(WEMEAFLat[,2], na.rm=TRUE)
 # 
 # class(D)
 # class(WMS1[2,7])
+
+#setequal(unique(USData[USData$RouteName==WEMEUS$RouteName[1],]$Year),unique(WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[1],]$Year))
