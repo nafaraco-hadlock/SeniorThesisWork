@@ -89,11 +89,11 @@ RouteTest=USData[USData$RouteName=='MAYBELL',]
 unique(RouteTest$Year)
 
 #Extract Western Meadowlark Data
-
-# WM=fifty[fifty$AOU==05011,]
-# WEMEUS=merge(WM,routes)
 WEMEUS=USData[USData$AOU==05011,]
 head(WEMEUS)
+# WM=fifty[fifty$AOU==05011,]
+# WEMEUS=merge(WM,routes)
+
 
 #Test: Determine the years when WEME were not seen
 WEMERouteTest=WEMEUS[WEMEUS$RouteName=='MAYBELL',]
@@ -103,8 +103,11 @@ unique(WEMERouteTest$Year)
 histogram=read.csv('US_NLCD_2016_HISTO.csv',header=T)
 head(histogram)
 
+##End of Startup Code##
+
 #plot population agianst year
 plot(WEMEUS$Stop1 ~ WEMEUS$Year)
+
 
 #generate random point count within each route
 
@@ -154,21 +157,26 @@ for (i in 1:nrow(WEMEUS)){
       RouteName=WEMEUS$RouteName[i]
       State=WEMEUS$StateNum[i]
       wmiRoute=WEMEUS[WEMEUS$RouteName==RouteName,]
-      RouteDataID=WEMEUS$RouteDataID[i]
-      Stratum=WEMEUS$Stratum[i]
-      PopTrend=summary(lm(formula = wmiRoute$Stop1~wmiRoute$Year))$coefficients[2]
-      Long=WEMEUS$Longitude[i]
-      Lat=WEMEUS$Latitude[i]
-      ObsN=WEMEUS$ObsN[i]
-      dfWMS1[i,1]=RouteName
-      dfWMS1[i,2]=RouteDataID
-      dfWMS1[i,3]=State
-      dfWMS1[i,4]=Stratum
-      dfWMS1[i,5]=PopTrend
-      dfWMS1[i,6]=Long
-      dfWMS1[i,7]=Lat
-      dfWMS1[i,8]=ObsN
-      TrashMatrix=rbind(TrashMatrix,matrix(RouteName))
+      if (nrow(wmiRoute)>9){
+        RouteDataID=WEMEUS$RouteDataID[i]
+        Stratum=WEMEUS$Stratum[i]
+        PopTrend=summary(lm(formula = wmiRoute$Stop1~wmiRoute$Year))$coefficients[2]
+        Long=WEMEUS$Longitude[i]
+        Lat=WEMEUS$Latitude[i]
+        ObsN=WEMEUS$ObsN[i]
+        dfWMS1[i,1]=RouteName
+        dfWMS1[i,2]=RouteDataID
+        dfWMS1[i,3]=State
+        dfWMS1[i,4]=Stratum
+        dfWMS1[i,5]=PopTrend
+        dfWMS1[i,6]=Long
+        dfWMS1[i,7]=Lat
+        dfWMS1[i,8]=ObsN
+        TrashMatrix=rbind(TrashMatrix,matrix(RouteName))
+      }
+      else{
+        TrashMatrix=rbind(TrashMatrix,matrix(RouteName))
+      }
       
       #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D))      
     }
@@ -183,21 +191,27 @@ for (i in 1:nrow(WEMEUS)){
       for (i in 1:length(ZeroYears)){
         wmiR2=rbind(wmiR2,c(NA,ZeroYears[i],0))
       }
-      RouteDataID=WEMEUS$RouteDataID[i]
-      Stratum=WEMEUS$Stratum[i]
-      PopTrend=summary(lm(formula = wmiR2[,3]~wmiR2[,2]))$coefficients[2]
-      Long=WEMEUS$Longitude[i]
-      Lat=WEMEUS$Latitude[i]
-      ObsN=WEMEUS$ObsN[i]
-      dfWMS1[i,1]=RouteName
-      dfWMS1[i,2]=RouteDataID
-      dfWMS1[i,3]=State
-      dfWMS1[i,4]=Stratum
-      dfWMS1[i,5]=PopTrend
-      dfWMS1[i,6]=Long
-      dfWMS1[i,7]=Lat
-      dfWMS1[i,8]=ObsN
-      TrashMatrix=rbind(TrashMatrix,matrix(RouteName))
+      if (nrow(wmiR2>9)){
+        RouteDataID=WEMEUS$RouteDataID[i]
+        Stratum=WEMEUS$Stratum[i]
+        PopTrend=summary(lm(formula = wmiR2[,3]~wmiR2[,2]))$coefficients[2]
+        Long=WEMEUS$Longitude[i]
+        Lat=WEMEUS$Latitude[i]
+        ObsN=WEMEUS$ObsN[i]
+        dfWMS1[i,1]=RouteName
+        dfWMS1[i,2]=RouteDataID
+        dfWMS1[i,3]=State
+        dfWMS1[i,4]=Stratum
+        dfWMS1[i,5]=PopTrend
+        dfWMS1[i,6]=Long
+        dfWMS1[i,7]=Lat
+        dfWMS1[i,8]=ObsN
+        TrashMatrix=rbind(TrashMatrix,matrix(RouteName))
+      }
+      else{
+        TrashMatrix=rbind(TrashMatrix,matrix(RouteName))
+      }
+
       
       #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D))        
     }
