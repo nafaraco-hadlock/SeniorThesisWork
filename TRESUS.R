@@ -1,4 +1,4 @@
-### Western Meadowlark United States R Script ###
+### Tree Swallow United States R Script ###
 
 # Author: Nicholas Faraco-Hadlock
 
@@ -102,6 +102,10 @@ unique(TRESRouteTest$Year)
 #Read in Zonal Histogram from QGIS Buffer
 histogram=read.csv('US_NLCD_2016_HISTO.csv',header=T)
 head(histogram)
+
+#Read in Plant Hardiness Zone Data
+PHZroutes=read.csv('PHZroutes.csv',header=T)
+head(PHZroutes)
 
 ##End of Startup Code##
 
