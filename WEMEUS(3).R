@@ -233,6 +233,8 @@ head(dfWMS1)
 #Merge histogram with population trend data
 newhistogram=matrix(ncol=3,byrow=TRUE)
 dfnewhistogram=as.data.frame(newhistogram)
+newPHZroutes=matrix(ncol=4,byrow=TRUE)
+dfnewPHZroutes=as.data.frame(newPHZroutes)
 
 for (i in 1:nrow(histogram)){
   dfnewhistogram=rbind(dfnewhistogram, matrix(ncol=3,byrow=TRUE))
@@ -243,13 +245,26 @@ for (i in 1:nrow(histogram)){
   dfnewhistogram[i,2]=b
   dfnewhistogram[i,3]=c 
 }
+for (i in 1:nrow(PHZroutes)){
+  dfnewPHZroutes=rbind(dfnewPHZroutes, matrix(ncol=4,byrow=TRUE))
+  b=PHZroutes$Longitude[i]
+  c=PHZroutes$Latitude[i]
+  PHZ=PHZroutes$rvalue_1[i]
+  PHZc=PHZroutes$temp_c[i]
+  dfnewPHZroutes[i,1]=PHZ
+  dfnewPHZroutes[i,2]=PHZc
+  dfnewPHZroutes[i,3]=b
+  dfnewPHZroutes[i,4]=c 
+}
 head(dfnewhistogram)
 unique(dfnewhistogram$V1)
 names(dfnewhistogram)=c("PropAg","Longitude","Latitude")
+names(dfnewPHZroutes)=c("PHZ","PHZc","Longitude","Latitude")
 dfnewhistogram=na.omit(dfnewhistogram)
 head(dfnewhistogram)
 dfnewhistogram=distinct(dfnewhistogram)
 PTLCWM = merge(dfnewhistogram,dfWMS1)
+PTLCWM = merge(PTLCWM,dfnewPHZroutes)
 PTLCWM=na.omit(PTLCWM)
 head(PTLCWM)
 unique(PTLCWM$PropAg)
@@ -274,49 +289,13 @@ lme3 <- lme(PopTrend ~ PropAg + Longitude, random=list(~1|Observer_Number), data
 lme4 <- lme(PopTrend ~ PropAg + Latitude, random=list(~1|Observer_Number), data = dfPTLCWM)
 #Population trend varies with relation to proportion agriculture, latitude and longitude (reasons above)
 lme5 <- lme(PopTrend ~ PropAg + Longitude + Latitude, random=list(~1|Observer_Number), data=dfPTLCWM)
+#Population trend varies with relation to Plant Hardiness Zone
+lme6 <- lme(PopTrend ~ PHZ, random=list(~1|Observer_Number), data=dfPTLCWM)
 
 ##AIC##
-model.sel (lme1, lme2, lme3, lme4, lme5)
+model.sel (lme1, lme2, lme3, lme4, lme5, lme6)
 summary(lme1)
 summary(lme2)
-
-#Rasterize Plant Hardiness Zone
-
-PHZ= readOGR(dsn=path.expand('\\rschfs1x\ userrs\ K-Q\ naf42_RS\ Desktop\ Senior Thesis Work'),layer='phm_us_shp.shp')
-s <- shapefile("\\rschfs1x\ userrs\ K-Q\ naf42_RS\ Desktop\ Senior Thesis Work\ phm_us_shp.shp")
-shp2raster <- function(shp, mask.raster, label, value, transform = FALSE, proj.from = NA,
-                       proj.to = NA, map = TRUE) {
-  require(raster, rgdal)
-  
-  # use transform==TRUE if the polygon is not in the same coordinate system as
-  # the output raster, setting proj.from & proj.to to the appropriate
-  # projections
-  if (transform == TRUE) {
-    proj4string(shp) <- proj.from
-    shp <- spTransform(shp, proj.to)
-  }
-  
-  # convert the shapefile to a raster based on a standardised background
-  # raster
-  r <- rasterize(shp, mask.raster)
-  # set the cells associated with the shapfile to the specified value
-  r[!is.na(r)] <- value
-  # merge the new raster with the mask raster and export to the working
-  # directory as a tif file
-  r <- mask(merge(r, mask.raster), mask.raster, filename = label, format = "GTiff",
-            overwrite = T)
-  
-  # plot map of new raster
-  if (map == TRUE) {
-    plot(r, main = label, axes = F, box = F)
-  }
-  
-  names(r) <- label
-  return(r)
-}
-RasterPHZ = shp2raster('phm_us_shp.shp',raster(xmn=-125,xmx=-66,ymn=23,ymx=50),transform=TRUE, map=TRUE, proj.from="+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs ",proj.to="+proj=longlat +datum=WGS84 +no_defs ")
-
-?readOGR
 
 
 #Plot Population Trend as a function of Latitude
@@ -420,3 +399,42 @@ range(WEMEAFLat[,2], na.rm=TRUE)
 # class(WMS1[2,7])
 
 #setequal(unique(USData[USData$RouteName==WEMEUS$RouteName[1],]$Year),unique(WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[1],]$Year))
+
+
+# #Rasterize Plant Hardiness Zone
+# 
+# PHZ= readOGR(dsn=path.expand('\\rschfs1x\ userrs\ K-Q\ naf42_RS\ Desktop\ Senior Thesis Work'),layer='phm_us_shp.shp')
+# s <- shapefile("\\rschfs1x\ userrs\ K-Q\ naf42_RS\ Desktop\ Senior Thesis Work\ phm_us_shp.shp")
+# shp2raster <- function(shp, mask.raster, label, value, transform = FALSE, proj.from = NA,
+#                        proj.to = NA, map = TRUE) {
+#   require(raster, rgdal)
+#   
+#   # use transform==TRUE if the polygon is not in the same coordinate system as
+#   # the output raster, setting proj.from & proj.to to the appropriate
+#   # projections
+#   if (transform == TRUE) {
+#     proj4string(shp) <- proj.from
+#     shp <- spTransform(shp, proj.to)
+#   }
+#   
+#   # convert the shapefile to a raster based on a standardised background
+#   # raster
+#   r <- rasterize(shp, mask.raster)
+#   # set the cells associated with the shapfile to the specified value
+#   r[!is.na(r)] <- value
+#   # merge the new raster with the mask raster and export to the working
+#   # directory as a tif file
+#   r <- mask(merge(r, mask.raster), mask.raster, filename = label, format = "GTiff",
+#             overwrite = T)
+#   
+#   # plot map of new raster
+#   if (map == TRUE) {
+#     plot(r, main = label, axes = F, box = F)
+#   }
+#   
+#   names(r) <- label
+#   return(r)
+# }
+# RasterPHZ = shp2raster('phm_us_shp.shp',raster(xmn=-125,xmx=-66,ymn=23,ymx=50),transform=TRUE, map=TRUE, proj.from="+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs ",proj.to="+proj=longlat +datum=WGS84 +no_defs ")
+# 
+# ?readOGR
