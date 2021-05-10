@@ -103,6 +103,10 @@ unique(WEMERouteTest$Year)
 histogram=read.csv('US_NLCD_2016_HISTO.csv',header=T)
 head(histogram)
 
+#Read in Plant Hardiness Zone Data
+PHZroutes=read.csv('PHZroutes.csv',header=T)
+head(PHZroutes)
+
 ##End of Startup Code##
 
 #plot population agianst year
