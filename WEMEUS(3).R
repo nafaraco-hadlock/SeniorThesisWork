@@ -94,6 +94,15 @@ head(WEMEUS)
 # WM=fifty[fifty$AOU==05011,]
 # WEMEUS=merge(WM,routes)
 
+#Remove Years Before 2001 and after 2016 (Those Included in NLCD Land Change Index)
+for(i in nrow(WEMEUS)){
+  if (WEMEUS$Year[i]<2001){
+    PTLCWM=PTLCWM[-c(i),]
+  }
+  if (WEMEUS$Year[i]>2016){
+    PTLCWM=PTLCWM[-c(i),]
+  }
+}
 
 #Test: Determine the years when WEME were not seen
 WEMERouteTest=WEMEUS[WEMEUS$RouteName=='MAYBELL',]
@@ -108,16 +117,13 @@ PHZroutes=read.csv('PHZroutes.csv',header=T)
 head(PHZroutes)
 
 #Read in Land Cover Change Data
-LandChangeHisto=read.csv('Land_Change_Histo',header=T)
+LandChangeHisto=read.csv('Land_Change_Histo.csv',header=T)
 head(LandChangeHisto)
 
 ##End of Startup Code##
 
 #plot population agianst year
 plot(WEMEUS$Stop1 ~ WEMEUS$Year)
-
-
-#generate random point count within each route
 
 #Plot for a single route
 WEMEUSRoute8=WEMEUS[WEMEUS$Route==8,]
@@ -155,7 +161,6 @@ summary(WEMEallroutes)
 WMS1=matrix(ncol=8,byrow=TRUE)
 dfWMS1=as.data.frame(WMS1)
 TrashMatrix=matrix()
-
 
 for (i in 1:nrow(WEMEUS)){
   if (identical(which(TrashMatrix==WEMEUS$RouteName[i]),integer(0))){
@@ -234,11 +239,13 @@ dfWMS1=na.omit(dfWMS1)
 nrow(dfWMS1)
 head(dfWMS1)
 
-#Merge histogram with population trend data
+### Merge histogram with population trend data ###
 newhistogram=matrix(ncol=3,byrow=TRUE)
 dfnewhistogram=as.data.frame(newhistogram)
 newPHZroutes=matrix(ncol=4,byrow=TRUE)
 dfnewPHZroutes=as.data.frame(newPHZroutes)
+newLandChangeHisto=matrix(ncol=3,byrow=TRUE)
+dfnewLandChangeHisto=as.data.frame(newLandChangeHisto)
 
 for (i in 1:nrow(histogram)){
   dfnewhistogram=rbind(dfnewhistogram, matrix(ncol=3,byrow=TRUE))
@@ -260,16 +267,34 @@ for (i in 1:nrow(PHZroutes)){
   dfnewPHZroutes[i,3]=b
   dfnewPHZroutes[i,4]=c 
 }
+for (i in 1:nrow(LandChangeHisto)){
+  dfnewLandChangeHisto=rbind(dfnewLandChangeHisto, matrix(ncol=3,byrow=TRUE))
+  b=histogram$Longitude[i]
+  c=histogram$Latitude[i]
+  propstatic=(LandChangeHisto$HISTO_Land_Change1[i]/sum(LandChangeHisto$HISTO_Land_Change0[i],LandChangeHisto$HISTO_Land_Change1[i],LandChangeHisto$HISTO_Land_Change2[i],LandChangeHisto$HISTO_Land_Change3[i],LandChangeHisto$HISTO_Land_Change4[i],LandChangeHisto$HISTO_Land_Change5[i],LandChangeHisto$HISTO_Land_Change6[i],LandChangeHisto$HISTO_Land_Change7[i],LandChangeHisto$HISTO_Land_Change8[i],LandChangeHisto$HISTO_Land_Change9[i],LandChangeHisto$HISTO_Land_Change10[i],LandChangeHisto$HISTO_Land_Change11[i]))
+  dfnewLandChangeHisto[i,1]=propstatic
+  dfnewLandChangeHisto[i,2]=b
+  dfnewLandChangeHisto[i,3]=c
+}
 head(dfnewhistogram)
 unique(dfnewhistogram$V1)
 names(dfnewhistogram)=c("PropAg","Longitude","Latitude")
 names(dfnewPHZroutes)=c("PHZ","PHZc","Longitude","Latitude")
+names(dfnewLandChangeHisto)=c("PropStatic","Longitude","Latitude")
 dfnewhistogram=na.omit(dfnewhistogram)
 head(dfnewhistogram)
 dfnewhistogram=distinct(dfnewhistogram)
+#Add Land cover, Land change and Plant Hardiness Zones data
 PTLCWM = merge(dfnewhistogram,dfWMS1)
 PTLCWM = merge(PTLCWM,dfnewPHZroutes)
+PTLCWM = merge(PTLCWM,dfnewLandChangeHisto)
 PTLCWM=na.omit(PTLCWM)
+#Remove Point Counts with over 10% Land Cover Change Since 2001 
+for(i in nrow(PTLCWM)){
+  if (PTLCWM$PropStatic[i]<0.9){
+    PTLCWM=PTLCWM[-c(i),]
+  }
+}
 head(PTLCWM)
 unique(PTLCWM$PropAg)
 plot(PTLCWM$PopTrend~PTLCWM$PropAg)
