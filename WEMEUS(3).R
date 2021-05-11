@@ -99,13 +99,17 @@ head(WEMEUS)
 WEMERouteTest=WEMEUS[WEMEUS$RouteName=='MAYBELL',]
 unique(WEMERouteTest$Year)
 
-#Read in Zonal Histogram from QGIS Buffer
+#Read in Zonal Histogram from QGIS Buffer: Radius 263.3 feet (5 acres)
 histogram=read.csv('US_NLCD_2016_HISTO.csv',header=T)
 head(histogram)
 
 #Read in Plant Hardiness Zone Data
 PHZroutes=read.csv('PHZroutes.csv',header=T)
 head(PHZroutes)
+
+#Read in Land Cover Change Data
+LandChangeHisto=read.csv('Land_Change_Histo',header=T)
+head(LandChangeHisto)
 
 ##End of Startup Code##
 
