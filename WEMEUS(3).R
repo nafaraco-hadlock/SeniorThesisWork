@@ -95,14 +95,8 @@ head(WEMEUS)
 # WEMEUS=merge(WM,routes)
 
 #Remove Years Before 2001 and after 2016 (Those Included in NLCD Land Change Index)
-for(i in nrow(WEMEUS)){
-  if (WEMEUS$Year[i]<2001){
-    PTLCWM=PTLCWM[-c(i),]
-  }
-  if (WEMEUS$Year[i]>2016){
-    PTLCWM=PTLCWM[-c(i),]
-  }
-}
+WEMEUS=WEMEUS[WEMEUS$Year > 2000,]
+WEMEUS=WEMEUS[WEMEUS$Year < 2017,]
 
 #Test: Determine the years when WEME were not seen
 WEMERouteTest=WEMEUS[WEMEUS$RouteName=='MAYBELL',]
@@ -233,20 +227,21 @@ for (i in 1:nrow(WEMEUS)){
 
 head(dfWMS1)
 #dfWMS1=as.data.frame(WMS1)
-names(dfWMS1) = c("Route","RouteDataID","StateNum","Strata","PopTrend","Longitude","Latitude","Observer_Number")
+(dfWMS1) = c("Route","RouteDataID","StateNum","Strata","PopTrend","Longitude","Latitude","Observer_Number")
 unique(dfWMS1$PopTrend)
 dfWMS1=na.omit(dfWMS1)
 nrow(dfWMS1)
 head(dfWMS1)
 
 ### Merge histogram with population trend data ###
+
+#Add Land cover, Land change and Plant Hardiness Zones data
 newhistogram=matrix(ncol=3,byrow=TRUE)
 dfnewhistogram=as.data.frame(newhistogram)
 newPHZroutes=matrix(ncol=4,byrow=TRUE)
 dfnewPHZroutes=as.data.frame(newPHZroutes)
 newLandChangeHisto=matrix(ncol=3,byrow=TRUE)
 dfnewLandChangeHisto=as.data.frame(newLandChangeHisto)
-
 for (i in 1:nrow(histogram)){
   dfnewhistogram=rbind(dfnewhistogram, matrix(ncol=3,byrow=TRUE))
   b=histogram$Longitude[i]
@@ -282,13 +277,18 @@ names(dfnewhistogram)=c("PropAg","Longitude","Latitude")
 names(dfnewPHZroutes)=c("PHZ","PHZc","Longitude","Latitude")
 names(dfnewLandChangeHisto)=c("PropStatic","Longitude","Latitude")
 dfnewhistogram=na.omit(dfnewhistogram)
+dfnewLandChangeHisto=na.omit(dfnewLandChangeHisto)
+dfnewPHZroutes=na.omit(dfnewPHZroutes)
 head(dfnewhistogram)
 dfnewhistogram=distinct(dfnewhistogram)
-#Add Land cover, Land change and Plant Hardiness Zones data
+dfnewLandChangeHisto=distinct(dfnewLandChangeHisto)
+dfnewPHZroutes=distinct(dfnewPHZroutes)
+
 PTLCWM = merge(dfnewhistogram,dfWMS1)
 PTLCWM = merge(PTLCWM,dfnewPHZroutes)
 PTLCWM = merge(PTLCWM,dfnewLandChangeHisto)
 PTLCWM=na.omit(PTLCWM)
+
 #Remove Point Counts with over 10% Land Cover Change Since 2001 
 for(i in nrow(PTLCWM)){
   if (PTLCWM$PropStatic[i]<0.9){
