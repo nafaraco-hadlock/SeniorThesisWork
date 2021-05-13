@@ -78,7 +78,7 @@ fifty10=read.csv('fifty10.csv',header=T)
 fifty=rbind(fifty1,fifty2,fifty3,fifty4,fifty5,fifty6,fifty7,fifty8,fifty9,fifty10)
 #head(fifty)
 
-#merge fifty with routes
+#merge fifty with routes and weather
 
 USData=merge(routes,fifty)
 USData=merge(USData,weather)
@@ -227,7 +227,7 @@ for (i in 1:nrow(WEMEUS)){
 
 head(dfWMS1)
 #dfWMS1=as.data.frame(WMS1)
-(dfWMS1) = c("Route","RouteDataID","StateNum","Strata","PopTrend","Longitude","Latitude","Observer_Number")
+names(dfWMS1) = c("Route","RouteDataID","StateNum","Strata","PopTrend","Longitude","Latitude","Observer_Number")
 unique(dfWMS1$PopTrend)
 dfWMS1=na.omit(dfWMS1)
 nrow(dfWMS1)
@@ -283,18 +283,16 @@ head(dfnewhistogram)
 dfnewhistogram=distinct(dfnewhistogram)
 dfnewLandChangeHisto=distinct(dfnewLandChangeHisto)
 dfnewPHZroutes=distinct(dfnewPHZroutes)
+head(dfnewhistogram)
 
 PTLCWM = merge(dfnewhistogram,dfWMS1)
 PTLCWM = merge(PTLCWM,dfnewPHZroutes)
 PTLCWM = merge(PTLCWM,dfnewLandChangeHisto)
-PTLCWM=na.omit(PTLCWM)
+PTLCWM = na.omit(PTLCWM)
+PTLCWM = distinct(PTLCWM)
 
 #Remove Point Counts with over 10% Land Cover Change Since 2001 
-for(i in nrow(PTLCWM)){
-  if (PTLCWM$PropStatic[i]<0.9){
-    PTLCWM=PTLCWM[-c(i),]
-  }
-}
+PTLCWM = PTLCWM[PropStatic>0.9,]
 head(PTLCWM)
 unique(PTLCWM$PropAg)
 plot(PTLCWM$PopTrend~PTLCWM$PropAg)
