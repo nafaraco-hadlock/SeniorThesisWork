@@ -12,7 +12,7 @@
 remove(list=ls()) 
 
 #Set Working Directory
-setwd("U:\naf42_RS\ Desktop\ Senior Thesis Work")
+setwd("//rschfs1x/userrs/K-Q/naf42_RS/Desktop/Senior Thesis Work")
 
 ## Load in Necessary Packages ##
 
@@ -23,7 +23,25 @@ library(raster)
 # Install the rgdal package
 #install.packages(c('rgdal'),repos = "http://cran.case.edu", configure.args=c("--with-proj-include=/packages/PROJ/6.1.0/include","--with-proj-lib=/packages/PROJ/6.1.0/lib"))
 library(rgdal)
+
+#Install dplyr
+library(dplyr)
+
+#Install lme
+library(lme4)
+library(nlme)
+
+#Instat MuMIn
+library(MuMIn)
+
+#Install tidyverse
+library(tidyverse)
+
 ## Reading in BBS Data ##
+
+#Read in weather.csv to get observer #
+weather=read.csv('weather.csv',header=T)
+head(weather)
 
 #routes
 routes=read.csv('routes.csv',header=T)
@@ -63,25 +81,46 @@ fifty10=read.csv('fifty10.csv',header=T)
 fifty=rbind(fifty1,fifty2,fifty3,fifty4,fifty5,fifty6,fifty7,fifty8,fifty9,fifty10)
 #head(fifty)
 
-#merge fifty with routes
+#merge fifty with routes and weather
 
-#USData=merge(routes,fifty)
-#head(USData)
-WM=fifty[fifty$AOU==05011,]
-WEMEUS=merge(WM,routes)
+USData=merge(routes,fifty)
+USData=merge(USData,weather)
+head(USData)
+
+#Test: Determine the Years for Which a route was surveyed
+RouteTest=USData[USData$RouteName=='MAYBELL',]
+unique(RouteTest$Year)
 
 #Extract Western Meadowlark Data
 WEMEUS=USData[USData$AOU==05011,]
 head(WEMEUS)
+# WM=fifty[fifty$AOU==05011,]
+# WEMEUS=merge(WM,routes)
 
-#Read in Zonal Histogram from QGIS Buffer
+#Remove Years Before 2001 and after 2016 (Those Included in NLCD Land Change Index)
+WEMEUS=WEMEUS[WEMEUS$Year > 2000,]
+WEMEUS=WEMEUS[WEMEUS$Year < 2017,]
+
+#Test: Determine the years when WEME were not seen
+WEMERouteTest=WEMEUS[WEMEUS$RouteName=='MAYBELL',]
+unique(WEMERouteTest$Year)
+
+#Read in Zonal Histogram from QGIS Buffer: Radius 263.3 feet (5 acres)
 histogram=read.csv('US_NLCD_2016_HISTO.csv',header=T)
 head(histogram)
 
+#Read in Plant Hardiness Zone Data
+PHZroutes=read.csv('PHZroutes.csv',header=T)
+head(PHZroutes)
+
+#Read in Land Cover Change Data
+LandChangeHisto=read.csv('Land_Change_Histo.csv',header=T)
+head(LandChangeHisto)
+
+##End of Startup Code##
+
 #plot population agianst year
 plot(WEMEUS$Stop1 ~ WEMEUS$Year)
-
-#generate random point count within each route
 
 #Plot for a single route
 WEMEUSRoute8=WEMEUS[WEMEUS$Route==8,]
@@ -116,44 +155,96 @@ plot(WEMEallroutes)
 summary(WEMEallroutes)
 
 #linear regression for all point count data for Stop1 with Long and Lat
-WMS1=matrix(ncol=7,byrow=TRUE)
+WMS1=matrix(ncol=8,byrow=TRUE)
 dfWMS1=as.data.frame(WMS1)
-
+TrashMatrix=matrix()
+j=1
 
 for (i in 1:nrow(WEMEUS)){
-  dfWMS1=rbind(dfWMS1, matrix(ncol=7,byrow=TRUE))
-  wmi=WEMEUS[WEMEUS$StateNum==WEMEUS$StateNum[i],]
-  A=WEMEUS$RouteName[i]
-  S=WEMEUS$StateNum[i]
-  wmiRoute=WEMEUS[WEMEUS$RouteName==A,]
-  L=WEMEUS$RouteDataID[i]
-  Y=WEMEUS$Stratum[i]
-  B=summary(lm(formula = wmiRoute$Stop1~wmiRoute$Year))$coefficients[2]
-  C=WEMEUS$Longitude[i]
-  D=WEMEUS$Latitude[i]
-  dfWMS1[i,1]=A
-  dfWMS1[i,2]=L
-  dfWMS1[i,3]=S
-  dfWMS1[i,4]=Y
-  dfWMS1[i,5]=B
-  dfWMS1[i,6]=C
-  dfWMS1[i,7]=D
-  
-  #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D))
+  if (identical(which(TrashMatrix==WEMEUS$RouteName[i]),integer(0))){
+    if (setequal(unique(USData[USData$RouteName==WEMEUS$RouteName[i],]$Year),unique(WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[i],]$Year))){
+      #wmi=WEMEUS[WEMEUS$StateNum==WEMEUS$StateNum[i],]
+      RouteName=WEMEUS$RouteName[i]
+      State=WEMEUS$StateNum[i]
+      wmiRoute=WEMEUS[WEMEUS$RouteName==RouteName,]
+      if (nrow(wmiRoute)>9 & colSums(wmiRoute != 0)[16]>3){
+        dfWMS1=rbind(dfWMS1, matrix(ncol=8,byrow=TRUE))
+        RouteDataID=WEMEUS$RouteDataID[i]
+        Stratum=WEMEUS$Stratum[i]
+        PopTrend=summary(lm(formula = wmiRoute$Stop1~wmiRoute$Year))$coefficients[2]
+        Long=WEMEUS$Longitude[i]
+        Lat=WEMEUS$Latitude[i]
+        ObsN=WEMEUS$ObsN[i]
+        dfWMS1[j,1]=RouteName
+        dfWMS1[j,2]=RouteDataID
+        dfWMS1[j,3]=State
+        dfWMS1[j,4]=Stratum
+        dfWMS1[j,5]=PopTrend
+        dfWMS1[j,6]=Long
+        dfWMS1[j,7]=Lat
+        dfWMS1[j,8]=ObsN
+        j=j+1
+        TrashMatrix=rbind(TrashMatrix,matrix(RouteName))
+      }else{
+        TrashMatrix=rbind(TrashMatrix,matrix(RouteName))
+      }
+      #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D))      
+    }else{
+      #wmi=WEMEUS[WEMEUS$StateNum==WEMEUS$StateNum[i],]
+      RouteName=WEMEUS$RouteName[i]
+      State=WEMEUS$StateNum[i]
+      ZeroYears=unique(USData[USData$RouteName==WEMEUS$RouteName[i],]$Year)[!(unique(USData[USData$RouteName==WEMEUS$RouteName[i],]$Year) %in% unique(WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[i],]$Year))]
+      wmiRoute=WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[i],]
+      wmiR2=cbind(matrix(nrow=nrow(wmiRoute)),wmiRoute$Year,wmiRoute$Stop1)
+      for (n in 1:length(ZeroYears)){
+        wmiR2=rbind(wmiR2,c(NA,ZeroYears[n],0))
+      }
+      if (nrow(wmiR2)>9 & colSums(wmiR2 != 0)[3]>3){
+        dfWMS1=rbind(dfWMS1, matrix(ncol=8,byrow=TRUE))
+        RouteDataID=WEMEUS$RouteDataID[i]
+        Stratum=WEMEUS$Stratum[i]
+        PopTrend=summary(lm(formula = wmiR2[,3]~wmiR2[,2]))$coefficients[2]
+        Long=WEMEUS$Longitude[i]
+        Lat=WEMEUS$Latitude[i]
+        ObsN=WEMEUS$ObsN[i]
+        dfWMS1[j,1]=RouteName
+        dfWMS1[j,2]=RouteDataID
+        dfWMS1[j,3]=State
+        dfWMS1[j,4]=Stratum
+        dfWMS1[j,5]=PopTrend
+        dfWMS1[j,6]=Long
+        dfWMS1[j,7]=Lat
+        dfWMS1[j,8]=ObsN
+        j=j+1
+        TrashMatrix=rbind(TrashMatrix,matrix(RouteName))
+      }else{
+        TrashMatrix=rbind(TrashMatrix,matrix(RouteName))
+      }
+      
+      
+      #WMS1=rbind(WMS1, c(A,L,S,Y,B,C,D))        
+    }
+  }
 }
-
 
 head(dfWMS1)
 #dfWMS1=as.data.frame(WMS1)
-names(dfWMS1) = c("Route","RouteDataID","StateNum","Strata","PopTrend","Longitude","Latitude")
+names(dfWMS1) = c("Route","RouteDataID","StateNum","Strata","PopTrend","Longitude","Latitude","Observer_Number")
 unique(dfWMS1$PopTrend)
 dfWMS1=na.omit(dfWMS1)
 nrow(dfWMS1)
+head(dfWMS1)
+write.csv(dfWMS1,"WMS1.csv",FALSE)
 
-#Merge histogram with population trend data
+### Merge histogram with population trend data ###
+
+#Add Land cover, Land change and Plant Hardiness Zones data
 newhistogram=matrix(ncol=3,byrow=TRUE)
 dfnewhistogram=as.data.frame(newhistogram)
-
+newPHZroutes=matrix(ncol=4,byrow=TRUE)
+dfnewPHZroutes=as.data.frame(newPHZroutes)
+newLandChangeHisto=matrix(ncol=3,byrow=TRUE)
+dfnewLandChangeHisto=as.data.frame(newLandChangeHisto)
 for (i in 1:nrow(histogram)){
   dfnewhistogram=rbind(dfnewhistogram, matrix(ncol=3,byrow=TRUE))
   b=histogram$Longitude[i]
@@ -163,20 +254,92 @@ for (i in 1:nrow(histogram)){
   dfnewhistogram[i,2]=b
   dfnewhistogram[i,3]=c 
 }
+for (i in 1:nrow(PHZroutes)){
+  dfnewPHZroutes=rbind(dfnewPHZroutes, matrix(ncol=4,byrow=TRUE))
+  b=PHZroutes$Longitude[i]
+  c=PHZroutes$Latitude[i]
+  PHZ=PHZroutes$rvalue_1[i]
+  PHZc=PHZroutes$temp_c[i]
+  dfnewPHZroutes[i,1]=PHZ
+  dfnewPHZroutes[i,2]=PHZc
+  dfnewPHZroutes[i,3]=b
+  dfnewPHZroutes[i,4]=c 
+}
+for (i in 1:nrow(LandChangeHisto)){
+  dfnewLandChangeHisto=rbind(dfnewLandChangeHisto, matrix(ncol=3,byrow=TRUE))
+  b=LandChangeHisto$Longitude[i]
+  c=LandChangeHisto$Latitude[i]
+  propstatic=(LandChangeHisto$HISTO_Land_Change1[i]/sum(LandChangeHisto$HISTO_Land_Change0[i],LandChangeHisto$HISTO_Land_Change1[i],LandChangeHisto$HISTO_Land_Change2[i],LandChangeHisto$HISTO_Land_Change3[i],LandChangeHisto$HISTO_Land_Change4[i],LandChangeHisto$HISTO_Land_Change5[i],LandChangeHisto$HISTO_Land_Change6[i],LandChangeHisto$HISTO_Land_Change7[i],LandChangeHisto$HISTO_Land_Change8[i],LandChangeHisto$HISTO_Land_Change9[i],LandChangeHisto$HISTO_Land_Change10[i],LandChangeHisto$HISTO_Land_Change11[i]))
+  dfnewLandChangeHisto[i,1]=propstatic
+  dfnewLandChangeHisto[i,2]=b
+  dfnewLandChangeHisto[i,3]=c
+}
 head(dfnewhistogram)
 unique(dfnewhistogram$V1)
 names(dfnewhistogram)=c("PropAg","Longitude","Latitude")
+names(dfnewPHZroutes)=c("PHZ","PHZc","Longitude","Latitude")
+names(dfnewLandChangeHisto)=c("PropStatic","Longitude","Latitude")
 dfnewhistogram=na.omit(dfnewhistogram)
+dfnewLandChangeHisto=na.omit(dfnewLandChangeHisto)
+dfnewPHZroutes=na.omit(dfnewPHZroutes)
 head(dfnewhistogram)
-PTLC = merge(dfnewhistogram,dfWMS1)
-PTLC=na.omit(PTLC)
-head(PTLC)
-unique(PTLC$PropAg)
-plot(PTLC$PopTrend~PTLC$PropAg)
-x=lm(formula = PTLC$PopTrend~PTLC$PropAg)
-abline(x)
-summary(x)
+dfnewhistogram=distinct(dfnewhistogram)
+dfnewLandChangeHisto=distinct(dfnewLandChangeHisto)
+dfnewPHZroutes=distinct(dfnewPHZroutes)
+head(dfnewhistogram)
 
+PTLCWM = merge(dfnewhistogram,dfWMS1)
+PTLCWM = PTLCWM[PTLCWM$PropAg!=0,]
+PTLCWM = merge(PTLCWM,dfnewPHZroutes)
+PTLCWM = merge(PTLCWM,dfnewLandChangeHisto)
+PTLCWM = na.omit(PTLCWM)
+PTLCWM = distinct(PTLCWM)
+
+#Remove Point Counts with over 10% Land Cover Change Since 2001 
+PTLCWM = PTLCWM[PTLCWM$PropStatic>0.9,]
+head(PTLCWM)
+unique(PTLCWM$PropAg)
+plot(PTLCWM$PopTrend~PTLCWM$PropAg)
+ggplot(data=PTLCWM,mapping=aes(PropAg,PopTrend))
+plot(PTLCWM$PopTrend~PTLCWM$Longitude)
+plot(PTLCWM$PopTrend~PTLCWM$Latitude)
+x=lm(formula = PTLCWM$PopTrend~PTLCWM$PropAg)
+y=lm(formula = PTLCWM$PopTrend~PTLCWM$Longitude)
+z=lm(formula = PTLCWM$PopTrend~PTLCWM$Latitude)
+abline(x)
+abline(y)
+abline(z)
+abline(a=0,b=0)
+summary(x)
+dfPTLCWM=as.data.frame(PTLCWM)
+write.csv(dfPTLCWM,"PTLCWM.csv",FALSE)
+dfPTLCWM=read.csv('PTLCWM.csv',header=T)
+
+##Model Suite##
+
+# #Null Model: Population Trend Varies Randomly (not varying with propag or coordinate)
+# lme1 <- lme(PopTrend ~ 1, random=list(~1|Observer_Number), data=dfPTLCWM)
+lm1 <- lm(PopTrend ~ 1, data=dfPTLCWM)
+# #Population trend varies with relation to proportion agriculture
+# lme2 <- lme(PopTrend ~ PropAg, random=list(~1|Observer_Number), data=dfPTLCWM)
+lm2 <- lm(PopTrend ~ PropAg, data=dfPTLCWM)
+# #Population trend varies with relation to proportion agriculture and longitude (With relation to WEME historic range, land use pattern and precipitation)
+# lme3 <- lme(PopTrend ~ PropAg + Longitude, random=list(~1|Observer_Number), data=dfPTLCWM)
+lm3 <- lm(PopTrend ~ PropAg + Longitude, data=dfPTLCWM)
+# #Population trend varies with relation to proportion agriculture and latitude (migration distance, preferred breeding habitat, mean annual temperature)
+# lme4 <- lme(PopTrend ~ PropAg + Latitude, random=list(~1|Observer_Number), data = dfPTLCWM)
+lm4 <- lm(PopTrend ~ PropAg + Latitude, data = dfPTLCWM)
+# #Population trend varies with relation to proportion agriculture, latitude and longitude (reasons above)
+# lme5 <- lme(PopTrend ~ PropAg + Longitude + Latitude, random=list(~1|Observer_Number), data=dfPTLCWM)
+lm5 <- lm(PopTrend ~ PropAg + Longitude + Latitude, data=dfPTLCWM)
+# #Population trend varies with relation to Plant Hardiness Zone
+# lme6 <- lme(PopTrend ~ PHZ, random=list(~1|Observer_Number), data=dfPTLCWM)
+lm6 <- lm(PopTrend ~ PHZ, data=dfPTLCWM)
+
+##AIC##
+model.sel (lm1, lm2, lm3, lm4, lm5, lm6)
+summary(lme1)
+summary(lme2)
 
 
 #Plot Population Trend as a function of Latitude
@@ -278,3 +441,44 @@ range(WEMEAFLat[,2], na.rm=TRUE)
 # 
 # class(D)
 # class(WMS1[2,7])
+
+#setequal(unique(USData[USData$RouteName==WEMEUS$RouteName[1],]$Year),unique(WEMEUS[WEMEUS$RouteName==WEMEUS$RouteName[1],]$Year))
+
+
+# #Rasterize Plant Hardiness Zone
+# 
+# PHZ= readOGR(dsn=path.expand('\\rschfs1x\ userrs\ K-Q\ naf42_RS\ Desktop\ Senior Thesis Work'),layer='phm_us_shp.shp')
+# s <- shapefile("\\rschfs1x\ userrs\ K-Q\ naf42_RS\ Desktop\ Senior Thesis Work\ phm_us_shp.shp")
+# shp2raster <- function(shp, mask.raster, label, value, transform = FALSE, proj.from = NA,
+#                        proj.to = NA, map = TRUE) {
+#   require(raster, rgdal)
+#   
+#   # use transform==TRUE if the polygon is not in the same coordinate system as
+#   # the output raster, setting proj.from & proj.to to the appropriate
+#   # projections
+#   if (transform == TRUE) {
+#     proj4string(shp) <- proj.from
+#     shp <- spTransform(shp, proj.to)
+#   }
+#   
+#   # convert the shapefile to a raster based on a standardised background
+#   # raster
+#   r <- rasterize(shp, mask.raster)
+#   # set the cells associated with the shapfile to the specified value
+#   r[!is.na(r)] <- value
+#   # merge the new raster with the mask raster and export to the working
+#   # directory as a tif file
+#   r <- mask(merge(r, mask.raster), mask.raster, filename = label, format = "GTiff",
+#             overwrite = T)
+#   
+#   # plot map of new raster
+#   if (map == TRUE) {
+#     plot(r, main = label, axes = F, box = F)
+#   }
+#   
+#   names(r) <- label
+#   return(r)
+# }
+# RasterPHZ = shp2raster('phm_us_shp.shp',raster(xmn=-125,xmx=-66,ymn=23,ymx=50),transform=TRUE, map=TRUE, proj.from="+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs ",proj.to="+proj=longlat +datum=WGS84 +no_defs ")
+# 
+# ?readOGR
